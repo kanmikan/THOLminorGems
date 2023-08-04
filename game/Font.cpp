@@ -1,9 +1,14 @@
 #include "Font.h"
 
 #include "minorGems/graphics/RGBAImage.h"
+#include "minorGems/util/log/AppLog.h"
 
 #include <string.h>
 
+#include <iostream>
+#include <string>
+#include <locale>
+#include <codecvt>
 
 typedef union rgbaColor {
         struct comp { 
@@ -432,24 +437,35 @@ double Font::getCharSpacing() {
     }
 
 
+std::string latin1ToUtf8(const char* latin1Str) {
+    
+	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    std::wstring wideString = converter.from_bytes(latin1Str);
+    std::string utf8String = converter.to_bytes(wideString);
 
-double Font::getCharPos( SimpleVector<doublePair> *outPositions,
-                         const char *inString, doublePair inPosition,
-                         TextAlignment inAlign ) {
+    return utf8String;
+}
+
+
+double Font::getCharPos( SimpleVector<doublePair> *outPositions, const char *inString, doublePair inPosition, TextAlignment inAlign ) {
 
     double scale = scaleFactor * mScaleFactor;
-    
-    unsigned int numChars = strlen( inString );
-    
+
+	std::string utf8String = latin1ToUtf8(inString);
+	
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wideString = converter.from_bytes(utf8String);
+	
+	//unsigned int numChars = strlen( inString );
+	unsigned int numChars = wideString.length();
+	
     double x = inPosition.x;
-    
-    
     double y = inPosition.y;
 
     // compensate for extra headspace in accent-equipped font files
     if( mAccentsPresent ) { 
         y += scale * mSpriteHeight / 4;
-        }
+		}
 
     
     double stringWidth = 0;
@@ -513,26 +529,35 @@ double Font::getCharPos( SimpleVector<doublePair> *outPositions,
 
 
 
-
-double Font::drawString( const char *inString, doublePair inPosition,
-                         TextAlignment inAlign ) {
+double Font::drawString( const char *inString, doublePair inPosition, TextAlignment inAlign ) {
+	
     SimpleVector<doublePair> pos( strlen( inString ) );
 
     double returnVal = getCharPos( &pos, inString, inPosition, inAlign );
 
     double scale = scaleFactor * mScaleFactor;
     
-    for( int i=0; i<pos.size(); i++ ) {
-        SpriteHandle spriteID = mSpriteMap[ (unsigned char)( inString[i] ) ];
-    
-        if( spriteID != NULL ) {
-            drawSprite( spriteID, pos.getElementDirect(i), scale );
-            }
-    
+	 // Convert Latin-1 input string to UTF-8
+    std::string utf8String = latin1ToUtf8(inString);
+	
+	// Convert UTF-8 input string to wstring
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wideString = converter.from_bytes(utf8String);
+	
+	int posIndex = 0;
+    for (wchar_t wchar : wideString) {
+        unsigned char codePointChar = static_cast<unsigned char>(wchar);
+
+        SpriteHandle spriteID = mSpriteMap[codePointChar];
+
+        if (spriteID != NULL) {
+            drawSprite(spriteID, pos.getElementDirect(posIndex), scale);
         }
-    
-    return returnVal;
+		posIndex++;
     }
+
+	return returnVal;    
+}
 
 
 

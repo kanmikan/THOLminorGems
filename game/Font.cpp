@@ -447,34 +447,30 @@ std::string latin1ToUtf8(const char* latin1Str) {
 }
 
 
-double Font::getCharPos( SimpleVector<doublePair> *outPositions, const char *inString, doublePair inPosition, TextAlignment inAlign ) {
-
+double Font::getCharPos(SimpleVector<doublePair>* outPositions, const char* inString, doublePair inPosition, TextAlignment inAlign) {
     double scale = scaleFactor * mScaleFactor;
 
-	std::string utf8String = latin1ToUtf8(inString);
-	
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::string utf8String = latin1ToUtf8(inString);
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring wideString = converter.from_bytes(utf8String);
-	
-	//unsigned int numChars = strlen( inString );
-	unsigned int numChars = wideString.length();
-	
+
+    unsigned int numChars = wideString.length();
+
     double x = inPosition.x;
     double y = inPosition.y;
 
     // compensate for extra headspace in accent-equipped font files
-    if( mAccentsPresent ) { 
+    if (mAccentsPresent) {
         y += scale * mSpriteHeight / 4;
-		}
+    }
 
-    
     double stringWidth = 0;
-    
-    if( inAlign != alignLeft ) {
-        stringWidth = measureString( inString );
-        }
-    
-    switch( inAlign ) {
+
+    if (inAlign != alignLeft) {
+        stringWidth = measureString(inString);
+    }
+
+    switch (inAlign) {
         case alignCenter:
             x -= stringWidth / 2;
             break;
@@ -482,67 +478,56 @@ double Font::getCharPos( SimpleVector<doublePair> *outPositions, const char *inS
             x -= stringWidth;
             break;
         default:
-            // left?  do nothing
-            break;            
-        }
-    
+            // left? do nothing
+            break;
+    }
+
     // character sprites are drawn on their centers, so the alignment
     // adjustments above aren't quite right.
     x += scale * mSpriteWidth / 2;
 
-
-    if( mMinimumPositionPrecision > 0 ) {
+    if (mMinimumPositionPrecision > 0) {
         x /= mMinimumPositionPrecision;
-        
-        x = lrint( floor( x ) );
-        
+        x = lrint(floor(x));
         x *= mMinimumPositionPrecision;
-        }
-    
+    }
 
-    for( unsigned int i=0; i<numChars; i++ ) {
-        doublePair charPos = { x, y };
-        
+    for (unsigned int i = 0; i < numChars; i++) {
+        doublePair charPos = {x, y};
+
         doublePair drawPos;
-        
-        double charWidth = positionCharacter( (unsigned char)( inString[i] ), 
-                                              charPos, &drawPos );
-        outPositions->push_back( drawPos );
-        
+
+        // Use the wide character instead of the original char
+        double charWidth = positionCharacter(static_cast<unsigned char>(wideString[i]), charPos, &drawPos);
+        outPositions->push_back(drawPos);
+
         x += charWidth + mCharSpacing * scale;
-        
-        if( !mFixedWidth && mEnableKerning 
-            && i < numChars - 1 
-            && mKerningTable[(unsigned char)( inString[i] )] != NULL ) {
+
+        if (!mFixedWidth && mEnableKerning && i < numChars - 1 && mKerningTable[static_cast<unsigned char>(wideString[i])] != nullptr) {
             // there's another character after this
             // apply true kerning adjustment to the pair
-            int offset = mKerningTable[ (unsigned char)( inString[i] ) ]->
-                offset[ (unsigned char)( inString[i+1] ) ];
+            int offset = mKerningTable[static_cast<unsigned char>(wideString[i])]->offset[static_cast<unsigned char>(wideString[i + 1])];
             x += offset * scale;
-            }
         }
-    // no spacing after last character
+    }
+    // no spacing after the last character
     x -= mCharSpacing * scale;
 
     return x;
-    }
-
+}
 
 
 double Font::drawString( const char *inString, doublePair inPosition, TextAlignment inAlign ) {
-	
-    SimpleVector<doublePair> pos( strlen( inString ) );
-
-    double returnVal = getCharPos( &pos, inString, inPosition, inAlign );
-
-    double scale = scaleFactor * mScaleFactor;
     
-	 // Convert Latin-1 input string to UTF-8
-    std::string utf8String = latin1ToUtf8(inString);
+	std::string utf8String = latin1ToUtf8(inString);
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	std::wstring wideString = converter.from_bytes(utf8String);
 	
-	// Convert UTF-8 input string to wstring
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    std::wstring wideString = converter.from_bytes(utf8String);
+	//SimpleVector<doublePair> pos( strlen( inString ) );
+	SimpleVector<doublePair> pos( wideString.length() );
+    
+	double returnVal = getCharPos( &pos, inString, inPosition, inAlign );
+    double scale = scaleFactor * mScaleFactor;
 	
 	int posIndex = 0;
     for (wchar_t wchar : wideString) {
@@ -621,12 +606,18 @@ void Font::drawCharacterSprite( unsigned char inC, doublePair inPosition ) {
 
 double Font::measureString( const char *inString, int inCharLimit ) {
     double scale = scaleFactor * mScaleFactor;
+	
+    //AppLog::printOutNextMessage();
+    //AppLog::infoF( "String: %s", inString );
+
 
     int numChars = inCharLimit;
 
     if( numChars == -1 ) {
         // no limit, measure whole string
         numChars = strlen( inString );
+		//numChars = wideString.length();
+		
         }
     
     double width = 0;
@@ -640,6 +631,7 @@ double Font::measureString( const char *inString, int inCharLimit ) {
         else if( mFixedWidth ) {
             width += mCharBlockWidth * scale;
             }
+
         else {
             width += mCharWidth[ c ] * scale;
 

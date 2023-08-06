@@ -50,10 +50,12 @@
 
 #include "stringUtils.h"
 
-
 #include <stdlib.h>
 
-
+#include <iostream>
+#include <string>
+#include <locale>
+#include <codecvt>
 
 
 char *stringToLowerCase( const char *inString  ) {
@@ -71,19 +73,34 @@ char *stringToLowerCase( const char *inString  ) {
 
 
 
-char *stringToUpperCase( const char *inString  ) {
+unsigned int utf8CharacterLength(char c) {
+    if ((c & 0x80) == 0x00) return 1;
+    if ((c & 0xE0) == 0xC0) return 2;
+    if ((c & 0xF0) == 0xE0) return 3;
+    if ((c & 0xF8) == 0xF0) return 4;
+    return 0;
+}
 
-    unsigned int length = strlen( inString );
+char *stringToUpperCase(const char *inString) {
+    unsigned int inLen = strlen(inString);
+    char *result = new char[inLen + 1];
+    unsigned int outIndex = 0;
 
-    char *returnString = stringDuplicate( inString );
-    
-    for( unsigned int i=0; i<length; i++ ) {
-        returnString[i] = (char)toupper( returnString[i] );
+    while (*inString) {
+        unsigned int charLen = utf8CharacterLength(*inString);
+        if (charLen == 0) {
+            ++inString;
+            continue;
         }
 
-    return returnString;
+        for (unsigned int i = 0; i < charLen; ++i) {
+            result[outIndex++] = toupper(*inString++);
+        }
     }
 
+    result[outIndex] = '\0';
+    return result;
+}
 
 
 char *stringLocateIgnoreCase( const char *inHaystack,

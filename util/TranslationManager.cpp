@@ -32,7 +32,6 @@
 TranslationManagerStaticMembers TranslationManager::mStaticMembers;
 
 
-
 void TranslationManager::setDirectoryName( const char *inName ) {
     mStaticMembers.setDirectoryAndLanguage( inName,
                                             mStaticMembers.mLanguageName,
@@ -105,6 +104,9 @@ void TranslationManager::setLanguage( const char *inLanguageName,
                                             inClearOldKeys );
     }
 
+std::string TranslationManager::getLanguage(){
+	return mStaticMembers.mLanguageName;
+}
 
 
 void TranslationManager::setLanguageData( const char *inData,

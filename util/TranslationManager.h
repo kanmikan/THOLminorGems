@@ -28,6 +28,7 @@
 
 
 #include "minorGems/util/SimpleVector.h"
+#include <string>
 
 
 
@@ -42,7 +43,6 @@ class TranslationManagerStaticMembers;
  * @author Jason Rohrer
  */
 class TranslationManager {
-
 
 
     public:
@@ -102,7 +102,9 @@ class TranslationManager {
         static void setLanguage( const char *inLanguageName,
                                  char inClearOldKeys = true );
         
-
+		
+		static std::string getLanguage();
+		
 
         // Sets the language data directly without reading it from 
         // the file system.
